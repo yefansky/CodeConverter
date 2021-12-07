@@ -10,6 +10,7 @@ int main(int nArgc, char* pArgv[])
 	Coder coder;
 	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp" };
+	const char* szIgnoreDirs[] = { "DevEnv", "Tools" };
 
 	if (nArgc <= 1)
 	{
@@ -25,6 +26,9 @@ int main(int nArgc, char* pArgv[])
 
 	for (auto szExtName : szExtNames)
 		fileList.AddExtNameFilter(szExtName);
+
+	for (auto szIgnore : szIgnoreDirs)
+		fileList.AddIgnoreDirFilter(szIgnore);
 
 	for (auto& rStrPath : searchPaths)
 		fileList.SearchFileList(rStrPath.c_str());

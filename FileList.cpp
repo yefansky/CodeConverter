@@ -23,6 +23,14 @@ Exit0:
 	return bResult;
 }
 
+FileList::FileList()
+{
+	AddIgnoreDirFilter(".");
+	AddIgnoreDirFilter("..");
+	AddIgnoreDirFilter(".svn");
+	AddIgnoreDirFilter(".git");
+}
+
 bool FileList::IsMatchFile(const char cszFileName[])
 {
 	bool        bResult = false;
@@ -77,11 +85,15 @@ bool FileList::_Search(const char cszDir[])
 	{
 		if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
-			if (
-				strcmp(FindFileData.cFileName, ".") != 0 &&
-				strcmp(FindFileData.cFileName, "..") != 0 &&
-				strcmp(FindFileData.cFileName, ".svn") != 0
-				)
+			bool bIgnore = false;
+			for (auto& rStrIgnore : m_ignoreDirNames)
+				if (strcmp(FindFileData.cFileName, rStrIgnore.c_str()) == 0)
+				{
+					bIgnore = true;
+					break;
+				}
+
+			if (!bIgnore)
 			{
 				nRetCode = snprintf(szPath, sizeof(szPath), "%s\\%s", cszDir, FindFileData.cFileName);
 				KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < (int)sizeof(szPath));
@@ -124,13 +136,19 @@ bool FileList::SearchFileList(const char cszDir[])
 	return _Search(cszDir);
 }
 
-bool FileList::AddExtNameFilter(const std::string& rExtName)
+bool FileList::AddExtNameFilter(const std::string& rStrExtName)
 {
-	if (rExtName.empty())
+	if (rStrExtName.empty())
 		return false;
-	if (rExtName[0] == '.')
-		m_extNames.push_back(rExtName.substr(1));
+	if (rStrExtName[0] == '.')
+		m_extNames.push_back(rStrExtName.substr(1));
 	else
-		m_extNames.push_back(rExtName);
+		m_extNames.push_back(rStrExtName);
+	return true;
+}
+
+bool FileList::AddIgnoreDirFilter(const std::string& rStrDir)
+{
+	m_ignoreDirNames.push_back(rStrDir);
 	return true;
 }

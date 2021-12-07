@@ -12,10 +12,13 @@ private:
 
 	FILE_TABLE  m_FileTable;
 	std::vector<std::string> m_extNames;
+	std::vector<std::string> m_ignoreDirNames;
 
 public:
+	FileList();
 	bool SearchFileList(const char cszDir[]);
-	bool AddExtNameFilter(const std::string& rExtName);
+	bool AddExtNameFilter(const std::string& rStrExtName);
+	bool AddIgnoreDirFilter(const std::string& rStrDir);
 	const FILE_TABLE& GetList()
 	{
 		return m_FileTable;

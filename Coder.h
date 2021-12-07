@@ -11,7 +11,7 @@ public:
 	bool Check();
 
 private:
-	bool HaveBom();
+	struct BOMDesc* GetBOMType();
 
 private:
 	char* m_pszBuffer = nullptr;
