@@ -8,19 +8,26 @@ int main(int nArgc, char* pArgv[])
 	bool bRetCode = false;
 	FileList fileList;
 	Coder coder;
-
-	std::string strSearchPath = ".";
+	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp" };
 
-	for (int i = 1; i < nArgc; i++)
+	if (nArgc <= 1)
 	{
-		strSearchPath = pArgv[i];
+		searchPaths.push_back(".");
+	}
+	else
+	{
+		for (int i = 1; i < nArgc; i++)
+		{
+			searchPaths.push_back(pArgv[i]);
+		}
 	}
 
 	for (auto szExtName : szExtNames)
 		fileList.AddExtNameFilter(szExtName);
 
-	fileList.SearchFileList(strSearchPath.c_str());
+	for (auto& rStrPath : searchPaths)
+		fileList.SearchFileList(rStrPath.c_str());
 
 	for (auto& rStrPath : fileList.GetList())
 	{
