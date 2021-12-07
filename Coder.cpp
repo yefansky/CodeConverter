@@ -128,6 +128,9 @@ int IsUTF8(const char* ch, size_t uLeftSize)
 	if (nLen > 6)
 		return 0;
 
+	if (nLen != 3)
+		return 0;
+
 	if (uLeftSize < nLen)
 		return 0;
 
@@ -237,11 +240,11 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize)
 		if (nOffset < uSize)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], '\0' };
-			printf("try output: '%s' (0x%04x %04x)\n", szTry, (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1]);
+			printf("try output: '%s' (0x%02x %02x)\n", szTry, (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1]);
 		}
 		else
 		{
-			printf("file end incomplete: 0x%04x", (unsigned char)pszBuffer[nOffset]);
+			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
 		}
 	}
 
