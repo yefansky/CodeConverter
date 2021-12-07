@@ -8,7 +8,7 @@ struct BOMDesc
 	const char* cpszName;
 };
 
-static BOMDesc s_BomDesc[] = {
+static BOMDesc s_BomDesc[] = { // 除了UTF8，还可能出现多种不同编码的BOM
 	{{(char)0xEF, (char)0xBB, (char)0xBF}, 3, "UTF-8"},
 	{{(char)0xFE, (char)0xFF}, 2, "UTF-16 Big-Endian"},
 	{{(char)0xFF, (char)0xFE}, 2, "UTF-16 Little-Endian"},
@@ -36,7 +36,7 @@ bool Coder::LoadFile(const char* pszPath)
 
 	m_strPath = pszPath;
 
-	pfFile = fopen(pszPath, "rb");
+	pfFile = fopen(pszPath, "rb"); // 为了正确校验文件大小，必须用二进制读取
 	KGLOG_PROCESS_ERROR(pfFile);
 
 	if (m_pszBuffer)
@@ -102,7 +102,7 @@ int IsGBK(const char* ch, size_t uLeftSize)
 		(ch1 >= 0x81 && ch1 <= 0xA0 && ch2 >= 0x40 && ch2 <= 0xFE && ch2 != 0x7F) ||
 		(ch1 >= 0xAA && ch1 <= 0xFE && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F) ||
 		(ch1 >= 0xA8 && ch1 <= 0xA9 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
-// 		(ch1 >= 0xAA && ch1 <= 0xAF && ch2 >= 0xA1 && ch2 <= 0xFE) ||
+// 		(ch1 >= 0xAA && ch1 <= 0xAF && ch2 >= 0xA1 && ch2 <= 0xFE) || // 自定义段，应该不会出现
 // 		(ch1 >= 0xF8 && ch1 <= 0xFE && ch2 >= 0xA1 && ch2 <= 0xFE) ||
 // 		(ch1 >= 0xA1 && ch1 <= 0xA7 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
 	)
@@ -114,7 +114,7 @@ int IsUTF8(const char* ch, size_t uLeftSize)
 {
 	static const unsigned char s_cuMask = 1 << 7;
 	int nLen = 0;
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < 7; i++) // UTF8 第一个字节 用打头的二进制 '1'个数表示一共有几个字节， 除了ASCII是0打头的
 	{
 		if (*ch & (s_cuMask >> i))
 			nLen++;
@@ -125,20 +125,22 @@ int IsUTF8(const char* ch, size_t uLeftSize)
 	if (nLen == 0)
 		return IsASCII(ch);
 
-	if (nLen > 6)
+	if (nLen < 2) // 除了ASCII，后续至少2个字节
 		return 0;
 
-	if (nLen != 3)
+	if (nLen > 6) // UTF8的最大长度不会超过这个上限
+		return 0;
+
+	if (nLen != 3) // 这是一个假设，因为大部分的中文落在UTF8的3个字节区域
 		return 0;
 
 	if (uLeftSize < nLen)
 		return 0;
 
-	static const unsigned char s_cuSuffixMask = 3 << 6;
-	static const unsigned char s_cuSuffixHeader = 2 << 6;
+	static const unsigned char s_cuSuffixHeader = 1 << 7;
 	for (int i = 1; i < nLen; i++)
 	{
-		if ((*(ch + i) & s_cuSuffixMask) != s_cuSuffixHeader)
+		if ((((unsigned char)*(ch + i)) >> 6 << 6) != s_cuSuffixHeader) // 从第二个字开始，都是用 10 开头的
 			return 0;
 	}
 	return nLen;
@@ -212,7 +214,7 @@ bool GetStopPos(const char* pszBuffer, size_t uSize, int (*checker)(const char* 
 	return bResult;
 }
 
-void ShowConfusionPos(const char* pszBuffer, size_t uSize)
+void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 {
 	bool	bRetCode		= false;
 	int		nLineCounter	= 0;
@@ -226,16 +228,40 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize)
 
 	bRetCode = GetStopPos(pszBuffer, uSize, IsGBK, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
-		printf("GBK stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset, nOffset);
+	{
+		printf("GBK stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
+
+		if (nOffset <= uSize - 2)
+		{
+			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1],  '\0' };
+			printf("HEX: (0x%02x %02x)\n", (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1]);
+		}
+		else
+		{
+			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
+		}
+	}
 
 	bRetCode = GetStopPos(pszBuffer, uSize, IsUTF8, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
-		printf("UTF8 stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset, nOffset);
+	{
+		printf("UTF8 stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
+
+		if (nOffset <= uSize - 3)
+		{
+			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], pszBuffer[nOffset + 2], '\0' };
+			printf("HEX: (0x%02x %02x %02x)\n", (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1], (unsigned char)pszBuffer[nOffset + 2]);
+		}
+		else
+		{
+			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
+		}
+	}
 
 	bRetCode = GetStopPos(pszBuffer, uSize, IsASCII, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
 	{
-		printf("ASCII stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset, nOffset);
+		printf("ASCII stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
 
 		if (nOffset < uSize)
 		{
@@ -302,7 +328,7 @@ Exit0:
 			else if (!bUTF8Pass)
 			{
 				printf("[ERROR] have utf8 bom, but content not utf8: %s\n", m_strPath.c_str());
-				ShowConfusionPos(m_pszBuffer + s_cpUTF8Bom->nLen, m_uFileSize - s_cpUTF8Bom->nLen);
+				ShowConfusionPos(m_pszBuffer + s_cpUTF8Bom->nLen, m_uFileSize - s_cpUTF8Bom->nLen, s_cpUTF8Bom->nLen);
 			}
 			else
 			{
@@ -312,7 +338,7 @@ Exit0:
 		else
 		{
 			printf("[ERROR] Unrecognized: %s\n", m_strPath.c_str());
-			ShowConfusionPos(m_pszBuffer, m_uFileSize);
+			ShowConfusionPos(m_pszBuffer, m_uFileSize, 0);
 		}
 	}
 	else
