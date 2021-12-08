@@ -2,6 +2,7 @@
 #include <string>
 #include "FileList.h"
 #include "Coder.h"
+#include <locale.h>
 
 int main(int nArgc, char* pArgv[])
 {
@@ -11,6 +12,8 @@ int main(int nArgc, char* pArgv[])
 	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp" };
 	const char* szIgnoreDirs[] = { "DevEnv"};
+
+	setlocale(LC_ALL, "");
 
 	if (nArgc <= 1)
 	{

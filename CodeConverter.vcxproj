@@ -146,6 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Coder.h" />
+    <ClInclude Include="CommonWords.h" />
     <ClInclude Include="FileList.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

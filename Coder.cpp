@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Coder.h"
+#include "CommonWords.h"
 
 struct BOMDesc
 {
@@ -97,15 +98,16 @@ int IsGBK(const char* ch, size_t uLeftSize)
 		return 0;
 	unsigned char ch1 = *ch;
 	unsigned char ch2 = *(ch + 1);
-	if ((ch1 >= 0xA1 && ch1 <= 0xA9 && ch2 >= 0xA1 && ch2 <= 0xFE) ||
-		(ch1 >= 0xB0 && ch1 <= 0xF7 && ch2 >= 0xA1 && ch2 <= 0xFE) ||
-		(ch1 >= 0x81 && ch1 <= 0xA0 && ch2 >= 0x40 && ch2 <= 0xFE && ch2 != 0x7F) ||
-		(ch1 >= 0xAA && ch1 <= 0xFE && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F) ||
-		(ch1 >= 0xA8 && ch1 <= 0xA9 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
-// 		(ch1 >= 0xAA && ch1 <= 0xAF && ch2 >= 0xA1 && ch2 <= 0xFE) || // 自定义段，应该不会出现
-// 		(ch1 >= 0xF8 && ch1 <= 0xFE && ch2 >= 0xA1 && ch2 <= 0xFE) ||
-// 		(ch1 >= 0xA1 && ch1 <= 0xA7 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
-	)
+	if (
+			(ch1 >= 0xA1 && ch1 <= 0xA9 && ch2 >= 0xA1 && ch2 <= 0xFE) ||
+			(ch1 >= 0xB0 && ch1 <= 0xF7 && ch2 >= 0xA1 && ch2 <= 0xFE) ||
+			(ch1 >= 0x81 && ch1 <= 0xA0 && ch2 >= 0x40 && ch2 <= 0xFE && ch2 != 0x7F) ||
+			(ch1 >= 0xAA && ch1 <= 0xFE && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F) ||
+			(ch1 >= 0xA8 && ch1 <= 0xA9 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
+			// 		(ch1 >= 0xAA && ch1 <= 0xAF && ch2 >= 0xA1 && ch2 <= 0xFE) || // 自定义段，应该不会出现
+			// 		(ch1 >= 0xF8 && ch1 <= 0xFE && ch2 >= 0xA1 && ch2 <= 0xFE) ||
+			// 		(ch1 >= 0xA1 && ch1 <= 0xA7 && ch2 >= 0x40 && ch2 <= 0xA0 && ch2 != 0x7F)
+		)
 		return 2;
 	return 0;
 }
@@ -146,6 +148,41 @@ int IsUTF8(const char* ch, size_t uLeftSize)
 	return nLen;
 }
 
+int _IsUTF8(const char* ch, size_t uLeftSize)
+{
+	static const unsigned char s_cuMask = 1 << 7;
+	int nLen = 0;
+	for (int i = 0; i < 7; i++) // UTF8 第一个字节 用打头的二进制 '1'个数表示一共有几个字节， 除了ASCII是0打头的
+	{
+		if (*ch & (s_cuMask >> i))
+			nLen++;
+		else
+			break;
+	}
+
+	if (nLen == 0)
+		return IsASCII(ch);
+
+	if (nLen < 2) // 除了ASCII，后续至少2个字节
+		return 0;
+
+	if (nLen > 6) // UTF8的最大长度不会超过这个上限
+		return 0;
+
+	if (uLeftSize < nLen)
+		return 0;
+
+	static const unsigned char s_cuSuffixHeader = 1 << 7;
+	for (int i = 1; i < nLen; i++)
+	{
+		if ((((unsigned char)*(ch + i)) >> 6 << 6) != s_cuSuffixHeader) // 从第二个字开始，都是用 10 开头的
+			return 0;
+	}
+	return nLen;
+}
+
+
+
 bool CheckForCode(const char* pszBuffer, size_t uSize, int (*checker)(const char* ch, size_t uLeftSize))
 {
 	const char* pszOffset = pszBuffer;
@@ -179,9 +216,6 @@ bool GetStopPos(const char* pszBuffer, size_t uSize, int (*checker)(const char* 
 
 	assert(pszBuffer);
 	assert(checker);
-	assert(pnRetLine);
-	assert(pnRetCol);
-	assert(pnRetOffset);
 
 	while (uLeftSize)
 	{
@@ -206,9 +240,12 @@ bool GetStopPos(const char* pszBuffer, size_t uSize, int (*checker)(const char* 
 		uLeftSize -= nLen;
 	}
 
-	*pnRetLine		= nLineCounter;
-	*pnRetCol		= nColCounter;
-	*pnRetOffset	= nOffset;
+	if (pnRetLine)
+		*pnRetLine = nLineCounter;
+	if (pnRetCol)
+		*pnRetCol = nColCounter;
+	if (pnRetOffset)
+		*pnRetOffset = nOffset;
 
 //Exit0:
 	return bResult;
@@ -234,12 +271,14 @@ void Coder::ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen
 		if (nOffset <= uSize - 2)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1],  '\0' };
+			putchar('\t');
 			ShowHex(pszBuffer + nOffset, 2);
 			ShowBinary(pszBuffer + nOffset, 2);
 			putchar('\n');
 		}
 		else
 		{
+			putchar('\t');
 			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
 		}
 	}
@@ -252,12 +291,16 @@ void Coder::ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen
 		if (nOffset <= uSize - 3)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], pszBuffer[nOffset + 2], '\0' };
+			putchar('\t');
 			ShowHex(pszBuffer + nOffset, 3);
 			ShowBinary(pszBuffer + nOffset, 3);
 			putchar('\n');
+			putchar('\t');
+			TryOutputUTF8((int)(nOffset + uBOMLen));
 		}
 		else
 		{
+			putchar('\t');
 			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
 		}
 	}
@@ -266,6 +309,7 @@ void Coder::ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen
 	if (bRetCode)
 	{
 		printf("ASCII stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, (unsigned)(nOffset + uBOMLen), (int)(nOffset + uBOMLen));
+		putchar('\t');
 		ShowHex(pszBuffer + nOffset, 3);
 		ShowBinary(pszBuffer + nOffset, 3);
 		putchar('\n');
@@ -273,11 +317,14 @@ void Coder::ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen
 		if (nOffset < uSize)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], '\0' };
+			putchar('\t');
 			TryOutputGBK((int)(nOffset + uBOMLen));
+			putchar('\t');
 			TryOutputUTF8((int)(nOffset + uBOMLen));
 		}
 		else
 		{
+			putchar('\t');
 			printf("file end incomplete: 0x%02x", (unsigned char)pszBuffer[nOffset]);
 		}
 	}
@@ -315,6 +362,8 @@ void Coder::ShowHex(const char* pszBuffer, size_t uLen)
 bool Coder::Check()
 {
 	bool					bResult		= false;
+	bool					bRetCode	= false;
+	int						nOffset		= 0;
 	bool					bHaveBom	= false;
 	bool					bASICCPass	= false;
 	bool					bGBKPass	= false;
@@ -343,6 +392,16 @@ bool Coder::Check()
 		bASICCPass = CheckForCode(m_pszBuffer, m_uFileSize, IsASCII);
 		bGBKPass = CheckForCode(m_pszBuffer, m_uFileSize, IsGBK);
 		bUTF8Pass = CheckForCode(m_pszBuffer, m_uFileSize, IsUTF8);
+
+		if (bGBKPass && bUTF8Pass && !bASICCPass)
+		{
+			bRetCode = GetStopPos(m_pszBuffer, m_uFileSize, IsASCII, nullptr, nullptr, &nOffset);
+			assert(bRetCode);
+			assert(nOffset < m_uFileSize);
+			if (!IsCommonGBKWord(m_pszBuffer[nOffset], m_pszBuffer[nOffset + 1]) ||
+				IsUnommonGBKWord(m_pszBuffer[nOffset], m_pszBuffer[nOffset + 1]))
+				bGBKPass = false;
+		}
 
 		KG_PROCESS_ERROR((bGBKPass || bUTF8Pass) && !(bGBKPass && bUTF8Pass && !bASICCPass));
 	}
@@ -449,7 +508,7 @@ wchar_t UTF8toWChar(const char* pszUTF8)
 
 void Coder::TryOutputUTF8(int nOffset)
 {
-	int nLen = IsUTF8(m_pszBuffer + nOffset, m_uFileSize - nOffset);
+	int nLen = _IsUTF8(m_pszBuffer + nOffset, m_uFileSize - nOffset);
 	wchar_t w = 0;
 
 	if (nLen > 0)
@@ -461,7 +520,7 @@ void Coder::TryOutputUTF8(int nOffset)
 			szTmp[i] = *(m_pszBuffer + nOffset + i);
 		}
 		szTmp[nLen] = '\0';
-		wchar_t w = UTF8toWChar(szTmp);
+		w = UTF8toWChar(szTmp);
 	}
 	if (w)
 		wprintf(L"Try Parsing as UTF8 char: '%lc' (0x%04x)\n", w, (unsigned short)w);
