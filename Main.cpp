@@ -10,7 +10,7 @@ int main(int nArgc, char* pArgv[])
 	Coder coder;
 	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp" };
-	const char* szIgnoreDirs[] = { "DevEnv", "Tools", "Tool"};
+	const char* szIgnoreDirs[] = { "DevEnv"};
 
 	if (nArgc <= 1)
 	{

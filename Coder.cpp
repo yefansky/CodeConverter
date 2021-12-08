@@ -214,7 +214,7 @@ bool GetStopPos(const char* pszBuffer, size_t uSize, int (*checker)(const char* 
 	return bResult;
 }
 
-void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
+void Coder::ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 {
 	bool	bRetCode		= false;
 	int		nLineCounter	= 0;
@@ -229,12 +229,14 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 	bRetCode = GetStopPos(pszBuffer, uSize, IsGBK, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
 	{
-		printf("GBK stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
+		printf("GBK stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, (unsigned)(nOffset + uBOMLen), (int)(nOffset + uBOMLen));
 
 		if (nOffset <= uSize - 2)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1],  '\0' };
-			printf("HEX: (0x%02x %02x)\n", (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1]);
+			ShowHex(pszBuffer + nOffset, 2);
+			ShowBinary(pszBuffer + nOffset, 2);
+			putchar('\n');
 		}
 		else
 		{
@@ -245,12 +247,14 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 	bRetCode = GetStopPos(pszBuffer, uSize, IsUTF8, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
 	{
-		printf("UTF8 stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
+		printf("UTF8 stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, (unsigned)(nOffset + uBOMLen), (int)(nOffset + uBOMLen));
 
 		if (nOffset <= uSize - 3)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], pszBuffer[nOffset + 2], '\0' };
-			printf("HEX: (0x%02x %02x %02x)\n", (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1], (unsigned char)pszBuffer[nOffset + 2]);
+			ShowHex(pszBuffer + nOffset, 3);
+			ShowBinary(pszBuffer + nOffset, 3);
+			putchar('\n');
 		}
 		else
 		{
@@ -261,12 +265,16 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 	bRetCode = GetStopPos(pszBuffer, uSize, IsASCII, &nLineCounter, &nColCounter, &nOffset);
 	if (bRetCode)
 	{
-		printf("ASCII stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, nOffset + uBOMLen, nOffset + uBOMLen);
+		printf("ASCII stop at line:%d col:%d, offset:0x%x(%d)\n", nLineCounter, nColCounter, (unsigned)(nOffset + uBOMLen), (int)(nOffset + uBOMLen));
+		ShowHex(pszBuffer + nOffset, 3);
+		ShowBinary(pszBuffer + nOffset, 3);
+		putchar('\n');
 
 		if (nOffset < uSize)
 		{
 			char szTry[4] = { pszBuffer[nOffset], pszBuffer[nOffset + 1], '\0' };
-			printf("try output: '%s' (0x%02x %02x)\n", szTry, (unsigned char)pszBuffer[nOffset], (unsigned char)pszBuffer[nOffset + 1]);
+			TryOutputGBK((int)(nOffset + uBOMLen));
+			TryOutputUTF8((int)(nOffset + uBOMLen));
 		}
 		else
 		{
@@ -275,6 +283,33 @@ void ShowConfusionPos(const char* pszBuffer, size_t uSize, size_t uBOMLen)
 	}
 
 	return;
+}
+
+void Coder::ShowBinary(const char* pszBuffer, size_t uLen)
+{
+	assert(pszBuffer);
+
+	printf("Binary:");
+	for (int i = 0; i < uLen; i++)
+	{
+		unsigned char uCh = (unsigned char)*(pszBuffer + i);
+		for (int j = 0; j < CHAR_BIT; j++)
+			putchar((uCh & ((1u << 7) >> j)) ? '1' : '0');
+		putchar(' ');
+	}
+}
+
+void Coder::ShowHex(const char* pszBuffer, size_t uLen)
+{
+	assert(pszBuffer);
+
+	printf("Hex: 0x");
+	for (int i = 0; i < uLen; i++)
+	{
+		unsigned char uCh = (unsigned char)*(pszBuffer + i);
+		printf("%02X", uCh);
+		putchar(' ');
+	}
 }
 
 bool Coder::Check()
@@ -338,6 +373,12 @@ Exit0:
 		else
 		{
 			printf("[ERROR] Unrecognized: %s\n", m_strPath.c_str());
+			if (bUTF8Pass)
+				printf("maybe utf8\n");
+			if (bGBKPass)
+				printf("maybe gbk\n");
+			if (!bUTF8Pass && !bGBKPass)
+				printf("not utf8 and gbk\n");
 			ShowConfusionPos(m_pszBuffer, m_uFileSize, 0);
 		}
 	}
@@ -397,4 +438,54 @@ BOMDesc* Coder::GetBOMType()
 
 Exit1:
 	return pResult;
+}
+
+wchar_t UTF8toWChar(const char* pszUTF8)
+{
+	wchar_t wChar = 0;
+	MultiByteToWideChar(CP_UTF8, NULL, pszUTF8, (int)strlen(pszUTF8), &wChar, 1);
+	return wChar;
+}
+
+void Coder::TryOutputUTF8(int nOffset)
+{
+	int nLen = IsUTF8(m_pszBuffer + nOffset, m_uFileSize - nOffset);
+	wchar_t w = 0;
+
+	if (nLen > 0)
+	{
+		char szTmp[8];
+		assert(nLen < _countof(szTmp) - 1);
+		for (int i = 0; i < nLen; i++)
+		{
+			szTmp[i] = *(m_pszBuffer + nOffset + i);
+		}
+		szTmp[nLen] = '\0';
+		wchar_t w = UTF8toWChar(szTmp);
+	}
+	if (w)
+		wprintf(L"Try Parsing as UTF8 char: '%lc' (0x%04x)\n", w, (unsigned short)w);
+	else
+		wprintf(L"Try Parsing as UTF8 char failed\n");
+}
+
+void Coder::TryOutputGBK(int nOffset)
+{
+	int nLen = IsGBK(m_pszBuffer + nOffset, m_uFileSize - nOffset);
+	assert(nLen <= 2);
+
+	if (nLen > 0)
+	{
+		char szTmp[8];
+		assert(nLen < _countof(szTmp) - 1);
+		for (int i = 0; i < nLen; i++)
+		{
+			szTmp[i] = *(m_pszBuffer + nOffset + i);
+		}
+		szTmp[nLen] = '\0';
+
+		printf("Try Parsing as GBK char: '%s' (0x%02x %02x)\n", szTmp, (unsigned char)szTmp[0], (unsigned char)szTmp[1]);
+	}
+	else
+		printf("Try Parsing as GBK char failed\n");
 }
