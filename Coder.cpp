@@ -415,48 +415,54 @@ Exit0:
 
 		if (bHaveBom)
 		{
-			if (pBOMDesc != s_cpUTF8Bom)
+			if (m_bOutputBOMMissMatch)
 			{
-				printf("[ERROR] bom type is %s : %s\n", pBOMDesc->cpszName, m_strPath.c_str());
-			}
-			else if (!bUTF8Pass)
-			{
-				printf("[ERROR] have utf8 bom, but content not utf8: %s\n", m_strPath.c_str());
-				ShowConfusionPos(m_pszBuffer + s_cpUTF8Bom->nLen, m_uFileSize - s_cpUTF8Bom->nLen, s_cpUTF8Bom->nLen);
-			}
-			else
-			{
-				assert(0);
+				if (pBOMDesc != s_cpUTF8Bom)
+				{
+					printf("[ERROR] bom type is %s : %s\n", pBOMDesc->cpszName, m_strPath.c_str());
+				}
+				else if (!bUTF8Pass)
+				{
+					printf("[ERROR] have utf8 bom, but content not utf8: %s\n", m_strPath.c_str());
+					ShowConfusionPos(m_pszBuffer + s_cpUTF8Bom->nLen, m_uFileSize - s_cpUTF8Bom->nLen, s_cpUTF8Bom->nLen);
+				}
+				else
+				{
+					assert(0);
+				}
 			}
 		}
 		else
 		{
-			printf("[ERROR] Unrecognized: %s\n", m_strPath.c_str());
-			if (bUTF8Pass)
-				printf("maybe utf8\n");
-			if (bGBKPass)
-				printf("maybe gbk\n");
-			if (!bUTF8Pass && !bGBKPass)
-				printf("not utf8 and gbk\n");
-			ShowConfusionPos(m_pszBuffer, m_uFileSize, 0);
+			if (m_bOutputUnrecognize)
+			{
+				printf("[ERROR] Unrecognized: %s\n", m_strPath.c_str());
+				if (bUTF8Pass)
+					printf("maybe utf8\n");
+				if (bGBKPass)
+					printf("maybe gbk\n");
+				if (!bUTF8Pass && !bGBKPass)
+					printf("not utf8 and gbk\n");
+				ShowConfusionPos(m_pszBuffer, m_uFileSize, 0);
+			}
 		}
 	}
-	else
+	else if (m_bOutputAllFileType)
 	{
 		if (bUTF8Pass)
 		{
-//  		SetConsoleColor c(FOREGROUND_BLUE);
-//  		printf("[UTF8] %s\n", m_strPath.c_str());
+  		SetConsoleColor c(FOREGROUND_BLUE);
+  		printf("[UTF8] %s\n", m_strPath.c_str());
 		}
 		else if (bGBKPass)
 		{
-// 			SetConsoleColor c(FOREGROUND_GREEN);
-// 			printf("[GBK] %s\n", m_strPath.c_str());
+ 			SetConsoleColor c(FOREGROUND_GREEN);
+ 			printf("[GBK] %s\n", m_strPath.c_str());
 		}
 		else if (m_uFileSize == 0)
 		{
-// 			SetConsoleColor c(FOREGROUND_GREEN);
-// 			printf("[EMPTY] %s\n", m_strPath.c_str());
+ 			SetConsoleColor c(FOREGROUND_GREEN);
+ 			printf("[EMPTY] %s\n", m_strPath.c_str());
 		}
 		else
 		{

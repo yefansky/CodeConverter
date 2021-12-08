@@ -21,5 +21,11 @@ private:
 	char* m_pszBuffer = nullptr;
 	size_t m_uFileSize = 0;
 	std::string m_strPath;
+
+public:
+	// output switch
+	bool m_bOutputBOMMissMatch = true;
+	bool m_bOutputAllFileType = true;
+	bool m_bOutputUnrecognize = true;
 };
 

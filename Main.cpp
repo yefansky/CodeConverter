@@ -36,6 +36,10 @@ int main(int nArgc, char* pArgv[])
 	for (auto& rStrPath : searchPaths)
 		fileList.SearchFileList(rStrPath.c_str());
 
+	coder.m_bOutputAllFileType	= false;	// 关闭 输出所有可识别文件现在的编码格式
+	coder.m_bOutputBOMMissMatch = false;	// 有BOM的就不再做检查了
+	coder.m_bOutputUnrecognize	= true;		// 输出所有不可识别的文件清单	
+
 	for (auto& rStrPath : fileList.GetList())
 	{
 		bRetCode = coder.LoadFile(rStrPath.c_str());
