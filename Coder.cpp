@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Coder.h"
 #include "CommonWords.h"
+#include "FileList.h"
 
 struct BOMDesc
 {
@@ -432,7 +433,7 @@ Exit0:
 				}
 			}
 		}
-		else
+		else 
 		{
 			if (m_bOutputUnrecognize)
 			{
@@ -447,26 +448,59 @@ Exit0:
 			}
 		}
 	}
-	else if (m_bOutputAllFileType)
+	else
 	{
-		if (bUTF8Pass)
+		if (m_bOutputAllFileType)
 		{
-  		SetConsoleColor c(FOREGROUND_BLUE);
-  		printf("[UTF8] %s\n", m_strPath.c_str());
+			if (bUTF8Pass)
+			{
+				SetConsoleColor c(FOREGROUND_BLUE);
+				printf("[UTF8] %s\n", m_strPath.c_str());
+			}
+			else if (bGBKPass)
+			{
+				SetConsoleColor c(FOREGROUND_GREEN);
+				printf("[GBK] %s\n", m_strPath.c_str());
+			}
+			else if (m_uFileSize == 0)
+			{
+				SetConsoleColor c(FOREGROUND_GREEN);
+				printf("[EMPTY] %s\n", m_strPath.c_str());
+			}
+			else
+			{
+				assert(0);
+			}
 		}
-		else if (bGBKPass)
+
+		if (m_bOutputConvertScript)
 		{
- 			SetConsoleColor c(FOREGROUND_GREEN);
- 			printf("[GBK] %s\n", m_strPath.c_str());
-		}
-		else if (m_uFileSize == 0)
-		{
- 			SetConsoleColor c(FOREGROUND_GREEN);
- 			printf("[EMPTY] %s\n", m_strPath.c_str());
-		}
-		else
-		{
-			assert(0);
+			char szPath[MAX_PATH];
+			strncpy(szPath, m_strPath.c_str(), sizeof(szPath));
+			szPath[sizeof(szPath) - 1] = 0;
+
+			bRetCode = FileList::ConvertToLinuxPath(szPath, sizeof(szPath));
+			assert(bRetCode);
+
+			if (!m_pfFile)
+			{
+				m_pfFile = fopen("ConvertCoding.sh", "wb");
+				fprintf(m_pfFile, "#!/bin/bash\n");
+			}
+			assert(m_pfFile);
+
+			if (!bHaveBom)
+			{
+				if (bUTF8Pass)
+				{
+					fprintf(m_pfFile, "sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"%s\"\n", szPath);
+				}
+				else if (bGBKPass)
+				{
+					fprintf(m_pfFile, "iconv -f gbk -t utf-8 \"%s\" -o \"%s\"\n", szPath, szPath);
+					fprintf(m_pfFile, "sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"%s\"\n", szPath);
+				}
+			}
 		}
 	}
 	return bResult;

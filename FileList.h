@@ -16,6 +16,10 @@ private:
 
 public:
 	FileList();
+	
+	static bool CutPathToRelative(char szStrBuffer[], size_t uStrBufferSize, const char* cpszTarget, const char* cpszNewHeader);
+	static bool ConvertToLinuxPath(char szStrBuffer[], size_t uStrBufferSize);
+
 	bool SearchFileList(const char cszDir[]);
 	bool AddExtNameFilter(const std::string& rStrExtName);
 	bool AddIgnoreDirFilter(const std::string& rStrDir);

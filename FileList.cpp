@@ -2,7 +2,7 @@
 #include "FileList.h"
 #include <string>
 
-bool CutPathToRelative(char szStrBuffer[], size_t uStrBufferSize, const char* cpszTarget, const char* cpszNewHeader)
+bool FileList::CutPathToRelative(char szStrBuffer[], size_t uStrBufferSize, const char* cpszTarget, const char* cpszNewHeader)
 {
 	bool bResult = false;
 	int nRetCode = 0;
@@ -17,6 +17,36 @@ bool CutPathToRelative(char szStrBuffer[], size_t uStrBufferSize, const char* cp
 	nRetCode = snprintf(szStrBuffer, uStrBufferSize, "%s%s", cpszNewHeader, szTmp);
 	KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < uStrBufferSize);
 	szStrBuffer[uStrBufferSize - 1] = '\0';
+
+	bResult = true;
+Exit0:
+	return bResult;
+}
+
+bool FileList::ConvertToLinuxPath(char szStrBuffer[], size_t uStrBufferSize)
+{
+	bool bResult = false;
+	int nRetCode = 0;
+	char szTmp[MAX_PATH];
+	char szDiscName[8];
+	char szDiscPath[MAX_PATH];
+	char* pszOffset = nullptr;
+
+	if (sscanf("%[^:]:\\%s", szDiscName, sizeof(szDiscName), szDiscPath, sizeof(szDiscPath)) == 2)
+	{
+		nRetCode = snprintf(szTmp, sizeof(szTmp), "/mnt/%s/%s", szDiscPath, szDiscPath);
+		KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < sizeof(szTmp));
+		szTmp[sizeof(szTmp) - 1] = 0;
+
+		strncpy(szStrBuffer, szTmp, uStrBufferSize);
+		szStrBuffer[uStrBufferSize - 1] = 0;
+	}
+
+	pszOffset = szStrBuffer;
+	while (pszOffset = strstr(pszOffset, "\\"))
+	{
+		*pszOffset = '/';
+	}
 
 	bResult = true;
 Exit0:

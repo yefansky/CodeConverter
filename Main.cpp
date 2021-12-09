@@ -11,7 +11,7 @@ int main(int nArgc, char* pArgv[])
 	Coder coder;
 	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp" };
-	const char* szIgnoreDirs[] = { "DevEnv"};
+	const char* szIgnoreDirs[] = { "DevEnv", "KG3DEngineDX11", "Tools"};
 
 	setlocale(LC_ALL, "");
 
@@ -36,9 +36,10 @@ int main(int nArgc, char* pArgv[])
 	for (auto& rStrPath : searchPaths)
 		fileList.SearchFileList(rStrPath.c_str());
 
-	coder.m_bOutputAllFileType	= false;	// 关闭 输出所有可识别文件现在的编码格式
-	coder.m_bOutputBOMMissMatch = false;	// 有BOM的就不再做检查了
-	coder.m_bOutputUnrecognize	= true;		// 输出所有不可识别的文件清单	
+	coder.m_bOutputAllFileType		= false;	// 关闭 输出所有可识别文件现在的编码格式
+	coder.m_bOutputBOMMissMatch		= true;		// 有BOM的就不再做检查了
+	coder.m_bOutputUnrecognize		= true;		// 输出所有不可识别的文件清单
+	coder.m_bOutputConvertScript	= true;		// 输出转换脚本
 
 	for (auto& rStrPath : fileList.GetList())
 	{
