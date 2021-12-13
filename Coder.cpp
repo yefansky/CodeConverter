@@ -12,14 +12,14 @@ struct BOMDesc
 
 static BOMDesc s_BomDesc[] = { // 除了UTF8，还可能出现多种不同编码的BOM
 	{{(char)0xEF, (char)0xBB, (char)0xBF}, 3, "UTF-8"},
-	{{(char)0xFE, (char)0xFF}, 2, "UTF-16 Big-Endian"},
-	{{(char)0xFF, (char)0xFE}, 2, "UTF-16 Little-Endian"},
-	{{(char)0x00, (char)0x00, (char)0xFE, (char)0xFF}, 4, "UTF-32 Big-Endian"},
-	{{(char)0xFF, (char)0xFE, (char)0x00, (char)0x00}, 4, "UTF-32 Little-Endian"},
-	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x38}, 4, "UTF-7"},
-	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x39}, 4, "UTF-7"},
-	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x2B}, 4, "UTF-7"},
-	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x2F}, 4, "UTF-7"},
+	{{(char)0xFE, (char)0xFF}, 2, "UTF-16BE"}, //  "UTF-16 Big-Endian"
+	{{(char)0xFF, (char)0xFE}, 2, "UTF-16LE"}, // "UTF-16 Little-Endian"
+	{{(char)0x00, (char)0x00, (char)0xFE, (char)0xFF}, 4, "UTF-32BE"}, // "UTF-32 Big-Endian"
+	{{(char)0xFF, (char)0xFE, (char)0x00, (char)0x00}, 4, "UTF-32LE"}, // "UTF-32 Little-Endian"
+	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x38}, 4, "UTF-7"}, // "UTF-7"
+	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x39}, 4, "UTF-7"}, // "UTF-7"
+	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x2B}, 4, "UTF-7"}, // "UTF-7"
+	{{(char)0x2B, (char)0x2F, (char)0x76, (char)0x2F}, 4, "UTF-7"}, // "UTF-7"
 	{{(char)0xF7, (char)0x64, (char)0x4C}, 3, "en:UTF-1"},
 	{{(char)0xDD, (char)0x73, (char)0x66, (char)0x73}, 4, "en:UTF-EBCDIC"},
 	{{(char)0x0E, (char)0xFE, (char)0xFF}, 3, "en:Standard Compression Scheme for Unicode"},
@@ -486,6 +486,26 @@ Exit0:
 			{
 				m_pfFile = fopen("ConvertCoding.sh", "wb");
 				fprintf(m_pfFile, "#!/bin/bash\n");
+				fprintf(m_pfFile,
+"\n\n"
+"function Convert() {\n"
+"		path=\"$1\"\n"
+"		fcode=\"$2\"\n"
+"		tcode=\"$3\"\n"
+"		iconv -f $fcode -t $tcode \"$path\" -o tmp\n"
+"		if [ $? -ne 0 ] ; then\n"
+"			echo \"error $path\"\n"
+"			return\n"
+"		fi\n"
+"		mv tmp \"$path\"\n"
+"}\n"
+"\n"
+"function AddBom() {\n"
+"	path=\"$1\"\n"
+"	sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"$path\"\n"
+"}\n"
+"\n"
+				);
 			}
 			assert(m_pfFile);
 
@@ -493,12 +513,12 @@ Exit0:
 			{
 				if (bUTF8Pass)
 				{
-					fprintf(m_pfFile, "sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"%s\"\n", szPath);
+					fprintf(m_pfFile, "AddBom \"%s\"\n", szPath);
 				}
 				else if (bGBKPass)
 				{
-					fprintf(m_pfFile, "iconv -f gbk -t utf-8 \"%s\" -o \"%s\"\n", szPath, szPath);
-					fprintf(m_pfFile, "sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"%s\"\n", szPath);
+					fprintf(m_pfFile, "Convert \"%s\" gb18030 utf-8\n", szPath);
+					fprintf(m_pfFile, "AddBom \"%s\"\n", szPath);
 				}
 			}
 		}
