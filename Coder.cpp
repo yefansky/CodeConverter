@@ -383,7 +383,7 @@ bool Coder::Check()
 	{
 		bHaveBom = true;
 
-		KG_PROCESS_ERROR(pBOMDesc == s_cpUTF8Bom);
+		KG_PROCESS_SUCCESS(pBOMDesc != s_cpUTF8Bom);
 
 		bUTF8Pass = CheckForCode(m_pszBuffer + pBOMDesc->nLen, m_uFileSize - pBOMDesc->nLen, IsUTF8);
 		KG_PROCESS_ERROR(bUTF8Pass);
@@ -487,24 +487,24 @@ Exit0:
 				m_pfFile = fopen("ConvertCoding.sh", "wb");
 				fprintf(m_pfFile, "#!/bin/bash\n");
 				fprintf(m_pfFile,
-"\n\n"
-"function Convert() {\n"
-"		path=\"$1\"\n"
-"		fcode=\"$2\"\n"
-"		tcode=\"$3\"\n"
-"		iconv -f $fcode -t $tcode \"$path\" -o tmp\n"
-"		if [ $? -ne 0 ] ; then\n"
-"			echo \"error $path\"\n"
-"			return\n"
-"		fi\n"
-"		mv tmp \"$path\"\n"
-"}\n"
-"\n"
-"function AddBom() {\n"
-"	path=\"$1\"\n"
-"	sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"$path\"\n"
-"}\n"
-"\n"
+					"\n\n"
+					"function Convert() {\n"
+					"		path=\"$1\"\n"
+					"		fcode=\"$2\"\n"
+					"		tcode=\"$3\"\n"
+					"		iconv -f $fcode -t $tcode \"$path\" -o tmp\n"
+					"		if [ $? -ne 0 ] ; then\n"
+					"			echo \"error $path\"\n"
+					"			return\n"
+					"		fi\n"
+					"		mv tmp \"$path\"\n"
+					"}\n"
+					"\n"
+					"function AddBom() {\n"
+					"	path=\"$1\"\n"
+					"	sed -i '1 s/^/\\xEF\\xBB\\xBF/' \"$path\"\n"
+					"}\n"
+					"\n"
 				);
 			}
 			assert(m_pfFile);
@@ -520,6 +520,18 @@ Exit0:
 					fprintf(m_pfFile, "Convert \"%s\" gb18030 utf-8\n", szPath);
 					fprintf(m_pfFile, "AddBom \"%s\"\n", szPath);
 				}
+			}
+			else if (_stricmp(pBOMDesc->cpszName, "UTF-16BE") == 0 ||
+				_stricmp(pBOMDesc->cpszName, "UTF-16LE") == 0 ||
+				_stricmp(pBOMDesc->cpszName, "UTF-32BE") == 0 ||
+				_stricmp(pBOMDesc->cpszName, "UTF-32LE") == 0
+				)
+			{
+				fprintf(m_pfFile, "Convert \"%s\" %s utf-8\n", szPath, pBOMDesc->cpszName);
+			}
+			else if (pBOMDesc != s_cpUTF8Bom && m_bOutputBOMMissMatch)
+			{
+				printf("[ERROR] bom type is %s : %s\n", pBOMDesc->cpszName, m_strPath.c_str());
 			}
 		}
 	}
