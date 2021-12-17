@@ -375,6 +375,7 @@ bool Coder::Check()
 	assert(m_uFileSize >= 0);
 
 	KG_PROCESS_SUCCESS(m_uFileSize == 0);
+
 	assert(m_pszBuffer);
 
 	pBOMDesc = GetBOMType();

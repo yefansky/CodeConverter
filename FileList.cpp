@@ -32,9 +32,9 @@ bool FileList::ConvertToLinuxPath(char szStrBuffer[], size_t uStrBufferSize)
 	char szDiscPath[MAX_PATH];
 	char* pszOffset = nullptr;
 
-	if (sscanf_s(szStrBuffer, "%[^:]:\\%s", szDiscName, (unsigned)sizeof(szDiscName), szDiscPath, (unsigned)sizeof(szDiscPath)) == 2)
+	if (sscanf_s(szStrBuffer, "%[^:]:\\%[^\n]", szDiscName, (unsigned)sizeof(szDiscName), szDiscPath, (unsigned)sizeof(szDiscPath)) == 2)
 	{
-		nRetCode = snprintf(szTmp, sizeof(szTmp), "/mnt/%s/%s", szDiscName, szDiscPath);
+		nRetCode = snprintf(szTmp, sizeof(szTmp), "/mnt/%s/%s", _strlwr(szDiscName), szDiscPath);
 		KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < sizeof(szTmp));
 		szTmp[sizeof(szTmp) - 1] = 0;
 
