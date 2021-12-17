@@ -32,7 +32,7 @@ bool FileList::ConvertToLinuxPath(char szStrBuffer[], size_t uStrBufferSize)
 	char szDiscPath[MAX_PATH];
 	char* pszOffset = nullptr;
 
-	if (sscanf_s(szStrBuffer, "%[^:]:\\%s", szDiscName, sizeof(szDiscName), szDiscPath, sizeof(szDiscPath)) == 2)
+	if (sscanf_s(szStrBuffer, "%[^:]:\\%s", szDiscName, (unsigned)sizeof(szDiscName), szDiscPath, (unsigned)sizeof(szDiscPath)) == 2)
 	{
 		nRetCode = snprintf(szTmp, sizeof(szTmp), "/mnt/%s/%s", szDiscName, szDiscPath);
 		KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < sizeof(szTmp));
@@ -103,7 +103,6 @@ bool FileList::_Search(const char cszDir[])
 	DWORD           dwScriptID = 0;
 	WIN32_FIND_DATA FindFileData;
 	char            szPath[MAX_PATH];
-	char            szTmp[MAX_PATH];
 
 	nRetCode = snprintf(szPath, sizeof(szPath), "%s\\*", cszDir);
 	KGLOG_PROCESS_ERROR(nRetCode > 0 && nRetCode < (int)sizeof(szPath));

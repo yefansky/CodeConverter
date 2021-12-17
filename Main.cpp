@@ -12,7 +12,7 @@ int main(int nArgc, char* pArgv[])
 	std::vector<std::string> searchPaths;
 	const char* szExtNames[] = { ".h", ".c", ".cpp", ".hpp", ".cc", ".cxx", ".hxx", ".c++", ".h++", 
 		".i", ".ii", ".ixx", ".ipp", ".txx", ".tpp", ".tpl", ".m"};
-	const char* szIgnoreDirs[] = { "DevEnv", "KG3DEngineDX11", "Tools"};
+	const char* szIgnoreDirs[] = { "DevEnv"};
 
 	setlocale(LC_ALL, "");
 
